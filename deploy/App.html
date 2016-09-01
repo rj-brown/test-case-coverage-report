@@ -7,7 +7,7 @@
 
     <script type="text/javascript">
         Rally.onReady(function () {
-                Ext.define("CustomApp",{extend:"Rally.app.App",componentCls:"app",launch:function(){}});
+                Ext.define("CustomApp",{extend:"Rally.app.App",componentCls:"app",launch:function(){this.iterationCombobox=this.add({xtype:"rallyiterationcombobox",listeners:{ready:this._onIterationComboboxLoad,scope:this}})},_onIterationComboboxLoad:function(){var addNewConfig={xtype:"rallyaddnew",recordTypes:["User Story","Defect"],ignoredRequiredFields:["Name","ScheduleState","Project"],showAddWithDetails:!1,listeners:{beforecreate:this._onBeforeCreate,scope:this}};this.addNew=this.add(addNewConfig);var cardBoardConfig={xtype:"rallycardboard",types:["Defect","User Story"],attribute:"ScheduleState",storeConfig:{filters:[this.iterationCombobox.getQueryFromSelected()]}};this.cardBoard=this.add(cardBoardConfig)},_onBeforeCreate:function(addNewComponent,record){record.set("Iteration",this.iterationCombobox.getValue())}});
 
             Rally.launchApp('CustomApp', {
                 name:"CustomApp",
