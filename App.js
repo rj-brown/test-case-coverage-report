@@ -1,14 +1,15 @@
 Ext.define('CustomApp', {
     extend: 'Rally.app.App',
     componentCls: 'app',
-     items: [
+    items: [
         {
             xtype: 'container',
             itemId: 'exportBtn'
         },
         {
             xtype: 'container',
-            itemId: 'milestoneCombobox'
+            itemId: 'milestoneCombobox',
+            label: 'test'
         },
         {
             xtype: 'container',
@@ -16,6 +17,7 @@ Ext.define('CustomApp', {
         }
     ],
     launch: function() {
+        
         this._myMask = new Ext.LoadMask(Ext.getBody(), {msg:"Loading data..."});
         this._myMask.show();
         
@@ -58,7 +60,9 @@ Ext.define('CustomApp', {
             	"Release",
             	"TestCases", 
             	"Feature",
-            	"WorkItemType"
+            	"WorkItemType",
+            	"Milestones",
+            	"PortfolioItem",
         	],
             limit: Infinity,
             // filters: this._getStateFilter,
@@ -74,6 +78,7 @@ Ext.define('CustomApp', {
        });
     },
     _onDataLoaded: function(store, data) {
+        
         var stories = [],
             pendingTestCases = data.length;
         _.each(data, function(story) {
@@ -86,13 +91,21 @@ Ext.define('CustomApp', {
             	_ref: story.get("_ref"), 
             	TestCaseCount: story.get("TestCases").Count, 
             	TestCases: [],
-            	WorkItemType: story.get("WorkItemType")
+            	WorkItemType: story.get("WorkItemType"),
             };
             
             if (s.Feature) {
                 s.FeatureName = s.Feature.Name;
+                
                 //s.FeatureNumericID is an integer, so that the Feature ID sort will compare numbers instead of strings
                 s.FeatureNumericID = Number(s.Feature.FormattedID.replace(/\D+/g, ''));
+                
+                var milestones = [];
+                _.each(s.Feature.Milestones._tagsNameArray, function(milestone){
+                     milestones.push(milestone.Name);
+                });
+                
+                s.FeatureMilestones = milestones.join(', ');
             }
             
             if (s.Release) {
@@ -131,9 +144,10 @@ Ext.define('CustomApp', {
         this._grid = Ext.create('Rally.ui.grid.Grid',{
             itemId: 'storiesGrid',
             store: store,
+            showRowActionsColumn: false,
             columnCfgs: [
             {
-                text: "Feature ID", dataIndex: "Feature",
+                text: "Feature", dataIndex: "Feature", width: 65, align: "center",
                 getSortParam: function() {
                     return "FeatureNumericID";  
                 },
@@ -142,9 +156,11 @@ Ext.define('CustomApp', {
                     return value ? '<a href="' + Rally.nav.Manager.getDetailUrl(value) + '">' + value.FormattedID + "</a>" : void 0;
                 }
             }, {
-                text: "Feature Name", dataIndex: "FeatureName"
+                text: "Feature Name", dataIndex: "FeatureName", flex: 1
             }, {
-                text: "Release", dataIndex: "Release",
+                text: "Feature Milestones", dataIndex: "FeatureMilestones", 
+            }, {
+                text: "Release", dataIndex: "Release", width: 65, align: "center",
                 getSortParam: function() {
                     return "ReleaseNumericID";  
                 },
@@ -153,20 +169,20 @@ Ext.define('CustomApp', {
             	tpl: Ext.create("Rally.ui.renderer.template.FormattedIDTemplate"),
             	getSortParam: function() {
             	    return "StoryNumericID";
-            	}
+                }
             }, { 
-            	text: "Name", dataIndex: "Name" 
+            	text: "Name", dataIndex: "Name", flex: 1
             }, { 
             	text: "Test Case Count", dataIndex: "TestCaseCount", align: "center" 
             }, {
-              text: "Test Cases", dataIndex: "TestCases", sortable: false,
-              renderer: function(value) {
-                var html = [];
-                Ext.Array.each(value, function(testcase) { 
-                	html.push('<a href="' + Rally.nav.Manager.getDetailUrl(testcase) + '">' + testcase.FormattedID + "</a>");
-                });
-                return html.join("</br>");
-              }
+                text: "Test Cases", dataIndex: "TestCases", sortable: false,
+                renderer: function(value) {
+                    var html = [];
+                    Ext.Array.each(value, function(testcase) { 
+                	    html.push('<a href="' + Rally.nav.Manager.getDetailUrl(testcase) + '">' + testcase.FormattedID + "</a>");
+                    });
+                    return html.join("</br>");
+                }
             }]
         });
         this.down('#gridContainer').add(this._grid);
@@ -191,12 +207,13 @@ Ext.define('CustomApp', {
 
         
         _.each(cols, function(col, index) {
-                data += this._getFieldTextAndEscape(col.text) + ',';
+            data += this._getFieldTextAndEscape(col.text) + ',';
         },this);
         
         data += "\r\n";
         _.each(this._stories, function(record) {
             var featureData = record["Feature"];
+            var storyData = '';
             _.each(cols, function(col, index) {
                 var text = '';
                 var fieldName   = col.dataIndex;
@@ -205,22 +222,41 @@ Ext.define('CustomApp', {
                 } else if (fieldName === "TestCaseCount") {
                     text = record[fieldName].toString();
                 } else if (fieldName === "TestCases"){
-                    var textArr = [];
-                    _.each(record[fieldName], function(testcase, index) {
-                        textArr.push(testcase.FormattedID);
-                    });
-                    text = textArr.join(', ');
+                    data += this._getTestCaseRowsForCSV(record[fieldName], storyData, record["TestCaseCount"]);
                 } else{
                     text = record[fieldName];
                 }
+                var cleanText = this._getFieldTextAndEscape(text);
+                data +=  cleanText + ',';
+                storyData += cleanText + ',';
                 
-                data += this._getFieldTextAndEscape(text) + ',';
-
             },this);
             data += "\r\n";
         },this);
 
         return data;
+    },
+    _getTestCaseRowsForCSV: function(testcases, storyRowStr, testcaseCount) {
+        //In this app in Rally, stories with multiple testcases group all the testcases into one table cell
+        //However, when exporting the data the requirement is for each 
+        //testcase to get it's own table row in the CSV, with all the story data duplicated.
+
+        var self = this;
+        var testcaseRows = '';
+        
+        _.each(testcases, function(testcase, index) {
+            if (index === 0) {
+                testcaseRows += self._getFieldTextAndEscape(testcase.FormattedID);
+            } else {
+                testcaseRows += storyRowStr + self._getFieldTextAndEscape(testcase.FormattedID);
+            }
+            
+            if(testcaseCount > 1 && index !== testcaseCount - 1 ) {
+                testcaseRows += "\r\n";
+            }
+        });
+        
+        return testcaseRows;
     },
     _getFieldTextAndEscape: function(fieldData) {
         var string  = this._getFieldText(fieldData);  
