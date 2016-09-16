@@ -4,12 +4,14 @@ Ext.define('CustomApp', {
     items: [
         {
             xtype: 'container',
-            itemId: 'exportBtn'
+            itemId: 'exportBtn',
+            cls: 'export-button'
         },
         {
             xtype: 'container',
             itemId: 'milestoneCombobox',
-            label: 'test'
+            label: 'test',
+            cls: 'milestone-combo-box'
         },
         {
             xtype: 'container',
