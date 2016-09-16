@@ -1,12 +1,11 @@
-CustomApp
-=========================
+Test Case Coverage Report
 
 ## Overview
 
 
 ## License
 
-CustomApp is released under the MIT license.  See the file [LICENSE](./LICENSE) for the full text.
+Test Case Coverage Report is released under the MIT license.  See the file [LICENSE](./LICENSE) for the full text.
 
 ##Documentation for SDK
 
