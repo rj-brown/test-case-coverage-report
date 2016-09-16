@@ -65,14 +65,15 @@ Ext.define('CustomApp', {
             	"WorkItemType",
             	"Milestones",
             	"PortfolioItem",
+            	"ScheduleState"
         	],
             limit: Infinity,
             // filters: this._getStateFilter,
-            filters: {
-                property: 'WorkItemType',
-                operator: '=',
-                value: "Functional"
-            },
+            // filters: {
+            //     property: 'WorkItemType',
+            //     operator: '=',
+            //     value: "Functional"
+            // },
             listeners: {
                 load: this._onDataLoaded,
                 scope:this
@@ -94,11 +95,18 @@ Ext.define('CustomApp', {
             	TestCaseCount: story.get("TestCases").Count, 
             	TestCases: [],
             	WorkItemType: story.get("WorkItemType"),
+            	StoryScheduleState: story.get("ScheduleState")
             };
             
             if (s.Feature) {
                 s.FeatureName = s.Feature.Name;
-                
+                s.FeatureWorkItemType = s.Feature.c_WorkItemType;
+                if (s.Feature.Release) {
+                    s.FeatureRelease = s.Feature.Release.Name;
+                } else {
+                    s.FeatureRelease = "Unscheduled";
+                }
+
                 //s.FeatureNumericID is an integer, so that the Feature ID sort will compare numbers instead of strings
                 s.FeatureNumericID = Number(s.Feature.FormattedID.replace(/\D+/g, ''));
                 
@@ -110,8 +118,12 @@ Ext.define('CustomApp', {
                 s.FeatureMilestones = milestones.join(', ');
             }
             
-            if (s.Release) {
-                s.ReleaseNumericID = Number(s.Release.replace(/\D+/g, ''));
+            if (s.FeatureRelease) {
+                if (s.FeatureRelease !== "Unscheduled") {
+                    s.FeatureReleaseNumericID = Number(s.FeatureRelease.replace(/\D+/g, ''));
+                } else {
+                    s.FeatureReleaseNumericID = 0;
+                }
             }
             
             var testcases = story.getCollection("TestCases", { fetch: ["FormattedID"] });
@@ -133,7 +145,9 @@ Ext.define('CustomApp', {
                 },
                 scope: this
             });
-            stories.push(s);
+            if (s.Feature && s.FeatureWorkItemType === "Functional") {
+                stories.push(s);
+            }
         }, this);
     },
     
@@ -149,7 +163,7 @@ Ext.define('CustomApp', {
             showRowActionsColumn: false,
             columnCfgs: [
             {
-                text: "Feature", dataIndex: "Feature", width: 65, align: "center",
+                text: "Feature ID", dataIndex: "Feature", width: 65,
                 getSortParam: function() {
                     return "FeatureNumericID";  
                 },
@@ -160,12 +174,12 @@ Ext.define('CustomApp', {
             }, {
                 text: "Feature Name", dataIndex: "FeatureName", flex: 1
             }, {
-                text: "Feature Milestones", dataIndex: "FeatureMilestones", 
-            }, {
-                text: "Release", dataIndex: "Release", width: 65, align: "center",
+                text: "Feature PSI", dataIndex: "FeatureRelease", width: 65,
                 getSortParam: function() {
-                    return "ReleaseNumericID";  
-                },
+                    return "FeatureReleaseNumericID";  
+                }            
+            }, {
+                text: "Feature Work Item Type", dataIndex: "FeatureWorkItemType", 
             }, { 
             	text: "User Story ID", dataIndex: "FormattedID", xtype: "templatecolumn",
             	tpl: Ext.create("Rally.ui.renderer.template.FormattedIDTemplate"),
@@ -173,11 +187,13 @@ Ext.define('CustomApp', {
             	    return "StoryNumericID";
                 }
             }, { 
-            	text: "Name", dataIndex: "Name", flex: 1
-            }, { 
-            	text: "Test Case Count", dataIndex: "TestCaseCount", align: "center" 
+            	text: "User Story Name", dataIndex: "Name", flex: 1
             }, {
-                text: "Test Cases", dataIndex: "TestCases", sortable: false,
+                text: "Story Schedule State", dataIndex: "StoryScheduleState"
+            }, { 
+            	text: "Test Case Count", dataIndex: "TestCaseCount", sortable: false
+            }, {
+                text: "Test Case ID", dataIndex: "TestCases",
                 renderer: function(value) {
                     var html = [];
                     Ext.Array.each(value, function(testcase) { 
