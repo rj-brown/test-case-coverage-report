@@ -13,12 +13,13 @@
     items: [
         {
             xtype: 'container',
-            itemId: 'exportBtn'
+            itemId: 'exportBtn',
+            cls: 'export-button'
         },
         {
             xtype: 'container',
             itemId: 'milestoneCombobox',
-            label: 'test'
+            cls: 'milestone-combo-box'
         },
         {
             xtype: 'container',
@@ -39,24 +40,24 @@
                 scope: this,
                 select: this._onSelect,
                 ready: this._initStore
-            },
-            
+            }
         });
    },
     _getStateFilter: function() {
         return {
-            property: 'Milestones',
+            property: 'FeatureMilestones',
             operator: '=',
-            value: this.down('#stateComboBox').getValue()
+            value: this.down('#stateComboBox').getRawValue()
         };
     },
     _onSelect: function() {
-        // this._grid.store.filter(this._getStateFilter());
-        var grid = this.down('rallygrid'),
-            store = grid.getStore();
+        var store = this._grid.getStore();
     
         store.clearFilter(true);
-        store.filter(this._getStateFilter());
+        if (this.down('#stateComboBox').getRawValue() !== "-- No Entry --") {
+            store.filter(this._getStateFilter());
+        }
+            this._grid.getView().refresh()
     },
    _initStore: function() {
         Ext.create('Rally.data.wsapi.Store', {
@@ -72,17 +73,18 @@
             	"WorkItemType",
             	"Milestones",
             	"PortfolioItem",
+            	"ScheduleState"
         	],
             limit: Infinity,
             // filters: this._getStateFilter,
-            filters: {
-                property: 'WorkItemType',
-                operator: '=',
-                value: "Functional"
-            },
+            // filters: {
+            //     property: 'WorkItemType',
+            //     operator: '=',
+            //     value: "Functional"
+            // },
             listeners: {
                 load: this._onDataLoaded,
-                scope:this
+                scope: this
             }
        });
     },
@@ -101,11 +103,18 @@
             	TestCaseCount: story.get("TestCases").Count, 
             	TestCases: [],
             	WorkItemType: story.get("WorkItemType"),
+            	StoryScheduleState: story.get("ScheduleState")
             };
             
             if (s.Feature) {
                 s.FeatureName = s.Feature.Name;
-                
+                s.FeatureWorkItemType = s.Feature.c_WorkItemType;
+                if (s.Feature.Release) {
+                    s.FeatureRelease = s.Feature.Release.Name;
+                } else {
+                    s.FeatureRelease = "Unscheduled";
+                }
+
                 //s.FeatureNumericID is an integer, so that the Feature ID sort will compare numbers instead of strings
                 s.FeatureNumericID = Number(s.Feature.FormattedID.replace(/\D+/g, ''));
                 
@@ -117,8 +126,12 @@
                 s.FeatureMilestones = milestones.join(', ');
             }
             
-            if (s.Release) {
-                s.ReleaseNumericID = Number(s.Release.replace(/\D+/g, ''));
+            if (s.FeatureRelease) {
+                if (s.FeatureRelease !== "Unscheduled") {
+                    s.FeatureReleaseNumericID = Number(s.FeatureRelease.replace(/\D+/g, ''));
+                } else {
+                    s.FeatureReleaseNumericID = 0;
+                }
             }
             
             var testcases = story.getCollection("TestCases", { fetch: ["FormattedID"] });
@@ -140,7 +153,9 @@
                 },
                 scope: this
             });
-            stories.push(s);
+            if (s.Feature && s.FeatureWorkItemType === "Functional") {
+                stories.push(s);
+            }
         }, this);
     },
     
@@ -156,7 +171,7 @@
             showRowActionsColumn: false,
             columnCfgs: [
             {
-                text: "Feature", dataIndex: "Feature", width: 65, align: "center",
+                text: "Feature ID", dataIndex: "Feature", width: 65,
                 getSortParam: function() {
                     return "FeatureNumericID";  
                 },
@@ -167,12 +182,12 @@
             }, {
                 text: "Feature Name", dataIndex: "FeatureName", flex: 1
             }, {
-                text: "Feature Milestones", dataIndex: "FeatureMilestones", 
-            }, {
-                text: "Release", dataIndex: "Release", width: 65, align: "center",
+                text: "Feature PSI", dataIndex: "FeatureRelease", width: 65,
                 getSortParam: function() {
-                    return "ReleaseNumericID";  
-                },
+                    return "FeatureReleaseNumericID";  
+                }            
+            }, {
+                text: "Feature Work Item Type", dataIndex: "FeatureWorkItemType", 
             }, { 
             	text: "User Story ID", dataIndex: "FormattedID", xtype: "templatecolumn",
             	tpl: Ext.create("Rally.ui.renderer.template.FormattedIDTemplate"),
@@ -180,11 +195,13 @@
             	    return "StoryNumericID";
                 }
             }, { 
-            	text: "Name", dataIndex: "Name", flex: 1
-            }, { 
-            	text: "Test Case Count", dataIndex: "TestCaseCount", align: "center" 
+            	text: "User Story Name", dataIndex: "Name", flex: 1
             }, {
-                text: "Test Cases", dataIndex: "TestCases", sortable: false,
+                text: "Story Schedule State", dataIndex: "StoryScheduleState"
+            }, { 
+            	text: "Test Case Count", dataIndex: "TestCaseCount", sortable: false
+            }, {
+                text: "Test Case ID", dataIndex: "TestCases",
                 renderer: function(value) {
                     var html = [];
                     Ext.Array.each(value, function(testcase) { 
@@ -210,22 +227,21 @@
     
     _getCSV: function () {
         
-        var cols    = this._grid.columns;
-        var store   = this._grid.store;
+        var cols = this._grid.columns;
+        var store = this._grid.store;
         var data = '';
 
-        
         _.each(cols, function(col, index) {
             data += this._getFieldTextAndEscape(col.text) + ',';
         },this);
-        
+        data += 'Milestones,'
         data += "\r\n";
         _.each(this._stories, function(record) {
             var featureData = record["Feature"];
             var storyData = '';
             _.each(cols, function(col, index) {
                 var text = '';
-                var fieldName   = col.dataIndex;
+                var fieldName = col.dataIndex;
                 if (fieldName === "Feature" && featureData) {
                     text = featureData.FormattedID;
                 } else if (fieldName === "TestCaseCount") {
@@ -238,8 +254,10 @@
                 var cleanText = this._getFieldTextAndEscape(text);
                 data +=  cleanText + ',';
                 storyData += cleanText + ',';
-                
             },this);
+            _.each(featureData.Milestones._tagsNameArray, function(milestone) {
+                data += this._getFieldTextAndEscape(milestone.Name) + ',';
+            }, this);
             data += "\r\n";
         },this);
 
@@ -308,6 +326,16 @@
     <style type="text/css">
         .app {
   /* Add app styles here */
+}
+.export-button {
+  display: inline;
+  float: left;
+  width: 100px;
+}
+.milestone-combo-box {
+  display: inline;
+  float: left;
+  width: 160px;
 }
 
     </style>

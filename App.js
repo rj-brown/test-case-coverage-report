@@ -10,7 +10,6 @@ Ext.define('CustomApp', {
         {
             xtype: 'container',
             itemId: 'milestoneCombobox',
-            label: 'test',
             cls: 'milestone-combo-box'
         },
         {
@@ -32,24 +31,24 @@ Ext.define('CustomApp', {
                 scope: this,
                 select: this._onSelect,
                 ready: this._initStore
-            },
-            
+            }
         });
    },
     _getStateFilter: function() {
         return {
-            property: 'Milestones',
+            property: 'FeatureMilestones',
             operator: '=',
-            value: this.down('#stateComboBox').getValue()
+            value: this.down('#stateComboBox').getRawValue()
         };
     },
     _onSelect: function() {
-        // this._grid.store.filter(this._getStateFilter());
-        var grid = this.down('rallygrid'),
-            store = grid.getStore();
+        var store = this._grid.getStore();
     
         store.clearFilter(true);
-        store.filter(this._getStateFilter());
+        if (this.down('#stateComboBox').getRawValue() !== "-- No Entry --") {
+            store.filter(this._getStateFilter());
+        }
+            this._grid.getView().refresh()
     },
    _initStore: function() {
         Ext.create('Rally.data.wsapi.Store', {
@@ -76,7 +75,7 @@ Ext.define('CustomApp', {
             // },
             listeners: {
                 load: this._onDataLoaded,
-                scope:this
+                scope: this
             }
        });
     },
@@ -219,42 +218,48 @@ Ext.define('CustomApp', {
     
     _getCSV: function () {
         
-        var cols    = this._grid.columns;
-        var store   = this._grid.store;
+        var cols = this._grid.columns;
+        var store = this._grid.store;
         var data = '';
 
-        
         _.each(cols, function(col, index) {
             data += this._getFieldTextAndEscape(col.text) + ',';
-        },this);
-        
+        }, this);
+        data += 'Milestones,'
         data += "\r\n";
         _.each(this._stories, function(record) {
             var featureData = record["Feature"];
             var storyData = '';
             _.each(cols, function(col, index) {
                 var text = '';
-                var fieldName   = col.dataIndex;
+                var fieldName = col.dataIndex;
                 if (fieldName === "Feature" && featureData) {
                     text = featureData.FormattedID;
                 } else if (fieldName === "TestCaseCount") {
                     text = record[fieldName].toString();
                 } else if (fieldName === "TestCases"){
-                    data += this._getTestCaseRowsForCSV(record[fieldName], storyData, record["TestCaseCount"]);
-                } else{
+                    data += this._getTestCaseRowsForCSV(record[fieldName], storyData, record["TestCaseCount"], featureData);
+                } else {
                     text = record[fieldName];
                 }
                 var cleanText = this._getFieldTextAndEscape(text);
                 data +=  cleanText + ',';
                 storyData += cleanText + ',';
-                
-            },this);
+            }, this);
+            data += this._getMilestonesForCSV(featureData);
             data += "\r\n";
-        },this);
+        }, this);
 
         return data;
     },
-    _getTestCaseRowsForCSV: function(testcases, storyRowStr, testcaseCount) {
+    _getMilestonesForCSV: function(feature) {
+        var milestones = '';
+        _.each(feature.Milestones._tagsNameArray, function(milestone) {
+            milestones += this._getFieldTextAndEscape(milestone.Name) + ' ';
+        }, this);
+        return milestones;
+    },
+    _getTestCaseRowsForCSV: function(testcases, storyRowStr, testcaseCount, feature) {
         //In this app in Rally, stories with multiple testcases group all the testcases into one table cell
         //However, when exporting the data the requirement is for each 
         //testcase to get it's own table row in the CSV, with all the story data duplicated.
@@ -270,7 +275,7 @@ Ext.define('CustomApp', {
             }
             
             if(testcaseCount > 1 && index !== testcaseCount - 1 ) {
-                testcaseRows += "\r\n";
+                testcaseRows += ',' + self._getMilestonesForCSV(feature) + "\r\n";
             }
         });
         
