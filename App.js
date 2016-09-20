@@ -48,7 +48,6 @@ Ext.define('CustomApp', {
         if (this.down('#stateComboBox').getRawValue() !== "-- No Entry --") {
             store.filter(this._getStateFilter());
         }
-            this._grid.getView().refresh()
     },
    _initStore: function() {
         Ext.create('Rally.data.wsapi.Store', {
@@ -120,8 +119,10 @@ Ext.define('CustomApp', {
                 s.FeatureMilestones = milestones.join(', ');
                 
                 _.each(this._featureStore.data.items, function(feature){
-                    if (s.Feature.FormattedID ===  feature.data.FormattedID){
-                        s.FeatureState = feature.data.State._refObjectName;
+                    if (s.Feature.FormattedID ===  feature.data.FormattedID) {
+                        if (feature.data.State) {
+                            s.FeatureState = feature.data.State._refObjectName;
+                        }
                     }
                 });
             }
@@ -136,7 +137,7 @@ Ext.define('CustomApp', {
             
             var testcases = story.getCollection("TestCases", { fetch: ["FormattedID"] });
             testcases.load({ 
-            	callback: function(records, operation, success) { 
+            	callback: function(records) { 
 	            	_.each(records, function(testcase) { 
 	            		s.TestCases.push({ 
 	            			_ref: testcase.get("_ref"), 
@@ -162,13 +163,17 @@ Ext.define('CustomApp', {
     _makeGrid:function(stories){
         this._myMask.hide();
         var store = Ext.create('Rally.data.custom.Store', {
-            data: stories
+            data: stories,
+            proxy: {
+                type:'memory'
+            }
         });
         this._stories = stories;
         this._grid = Ext.create('Rally.ui.grid.Grid',{
             itemId: 'storiesGrid',
             store: store,
             showRowActionsColumn: false,
+            showPagingToolbar: false,
             columnCfgs: [
             {
                 text: "Feature ID", dataIndex: "Feature", width: 65,
@@ -176,7 +181,6 @@ Ext.define('CustomApp', {
                     return "FeatureNumericID";  
                 },
                 renderer: function(value) {
-                    var html = [];
                     return value ? '<a href="' + Rally.nav.Manager.getDetailUrl(value) + '">' + value.FormattedID + "</a>" : void 0;
                 }
             }, {
@@ -230,18 +234,17 @@ Ext.define('CustomApp', {
     _getCSV: function () {
         
         var cols = this._grid.columns;
-        var store = this._grid.store;
         var data = '';
 
-        _.each(cols, function(col, index) {
+        _.each(cols, function(col) {
             data += this._getFieldTextAndEscape(col.text) + ',';
         }, this);
-        data += 'Milestones,'
+        data += 'Milestones,';
         data += "\r\n";
         _.each(this._stories, function(record) {
             var featureData = record["Feature"];
             var storyData = '';
-            _.each(cols, function(col, index) {
+            _.each(cols, function(col) {
                 var text = '';
                 var fieldName = col.dataIndex;
                 if (fieldName === "Feature" && featureData) {
