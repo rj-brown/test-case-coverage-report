@@ -63,24 +63,27 @@ Ext.define('CustomApp', {
             	"Feature",
             	"WorkItemType",
             	"Milestones",
-            	"PortfolioItem",
             	"ScheduleState"
         	],
             limit: Infinity,
-            // filters: this._getStateFilter,
-            // filters: {
-            //     property: 'WorkItemType',
-            //     operator: '=',
-            //     value: "Functional"
-            // },
             listeners: {
                 load: this._onDataLoaded,
                 scope: this
             }
+        });
+       
+        this._featureStore = Ext.create('Rally.data.wsapi.Store', {
+            model: 'PortfolioItem',
+            autoLoad: true,
+            remoteSort: false,
+            fetch:[
+        	    "FormattedID", 
+            	"State"
+        	],
+            limit: Infinity
        });
     },
     _onDataLoaded: function(store, data) {
-        
         var stories = [],
             pendingTestCases = data.length;
         _.each(data, function(story) {
@@ -94,7 +97,8 @@ Ext.define('CustomApp', {
             	TestCaseCount: story.get("TestCases").Count, 
             	TestCases: [],
             	WorkItemType: story.get("WorkItemType"),
-            	StoryScheduleState: story.get("ScheduleState")
+            	StoryScheduleState: story.get("ScheduleState"),
+            	FeatureState: ''
             };
             
             if (s.Feature) {
@@ -113,8 +117,13 @@ Ext.define('CustomApp', {
                 _.each(s.Feature.Milestones._tagsNameArray, function(milestone){
                      milestones.push(milestone.Name);
                 });
-                
                 s.FeatureMilestones = milestones.join(', ');
+                
+                _.each(this._featureStore.data.items, function(feature){
+                    if (s.Feature.FormattedID ===  feature.data.FormattedID){
+                        s.FeatureState = feature.data.State._refObjectName;
+                    }
+                });
             }
             
             if (s.FeatureRelease) {
@@ -139,11 +148,11 @@ Ext.define('CustomApp', {
 	            	--pendingTestCases;
                     if (pendingTestCases === 0) {
                         this._makeGrid(stories);
-
                     }
                 },
                 scope: this
             });
+
             if (s.Feature && s.FeatureWorkItemType === "Functional") {
                 stories.push(s);
             }
@@ -153,7 +162,7 @@ Ext.define('CustomApp', {
     _makeGrid:function(stories){
         this._myMask.hide();
         var store = Ext.create('Rally.data.custom.Store', {
-            data: stories  
+            data: stories
         });
         this._stories = stories;
         this._grid = Ext.create('Rally.ui.grid.Grid',{
@@ -178,7 +187,9 @@ Ext.define('CustomApp', {
                     return "FeatureReleaseNumericID";  
                 }            
             }, {
-                text: "Feature Work Item Type", dataIndex: "FeatureWorkItemType", 
+                text: "Feature Work Item Type", dataIndex: "FeatureWorkItemType",
+            }, {
+                text: "Feature State", dataIndex: "FeatureState", 
             }, { 
             	text: "User Story ID", dataIndex: "FormattedID", xtype: "templatecolumn",
             	tpl: Ext.create("Rally.ui.renderer.template.FormattedIDTemplate"),
