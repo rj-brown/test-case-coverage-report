@@ -56,6 +56,8 @@
         store.clearFilter(true);
         if (this.down('#stateComboBox').getRawValue() !== "-- No Entry --") {
             store.filter(this._getStateFilter());
+        } else {
+            store.reload();
         }
     },
    _initStore: function() {
@@ -183,7 +185,6 @@
             store: store,
             showRowActionsColumn: false,
             showPagingToolbar: false,
-            cls: 'test-class',
             columnCfgs: [
             {
                 text: "Feature ID", dataIndex: "Feature", width: 65,

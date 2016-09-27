@@ -47,6 +47,8 @@ Ext.define('CustomApp', {
         store.clearFilter(true);
         if (this.down('#stateComboBox').getRawValue() !== "-- No Entry --") {
             store.filter(this._getStateFilter());
+        } else {
+            store.reload();
         }
     },
    _initStore: function() {
