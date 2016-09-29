@@ -52,27 +52,6 @@ Ext.define('CustomApp', {
         }
     },
    _initStore: function() {
-        Ext.create('Rally.data.wsapi.Store', {
-            model: 'UserStory',
-            autoLoad: true,
-            remoteSort: false,
-            fetch:[
-        	    "FormattedID", 
-            	"Name",
-            	"Release",
-            	"TestCases", 
-            	"Feature",
-            	"WorkItemType",
-            	"Milestones",
-            	"ScheduleState"
-        	],
-            limit: Infinity,
-            listeners: {
-                load: this._onDataLoaded,
-                scope: this
-            }
-        });
-       
         this._featureStore = Ext.create('Rally.data.wsapi.Store', {
             model: 'PortfolioItem',
             autoLoad: true,
@@ -83,6 +62,28 @@ Ext.define('CustomApp', {
         	],
             limit: Infinity
        });
+       this._featureStore.on('load',function () {
+            Ext.create('Rally.data.wsapi.Store', {
+                model: 'UserStory',
+                autoLoad: true,
+                remoteSort: false,
+                fetch:[
+            	    "FormattedID", 
+                	"Name",
+                	"Release",
+                	"TestCases", 
+                	"Feature",
+                	"WorkItemType",
+                	"Milestones",
+                	"ScheduleState"
+            	],
+                limit: Infinity,
+                listeners: {
+                    load: this._onDataLoaded,
+                    scope: this
+                }
+            });
+       },this);
     },
     _onDataLoaded: function(store, data) {
         var stories = [],
