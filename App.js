@@ -56,11 +56,10 @@ Ext.define('CustomApp', {
             model: 'PortfolioItem',
             autoLoad: true,
             remoteSort: false,
-            fetch: true,
-        //     fetch:[
-        // 	    "FormattedID", 
-        //     	"State"
-        // 	],
+            fetch:[
+        	    "FormattedID", 
+            	"State"
+        	],
             limit: Infinity
        });
        this._featureStore.on('load',function () {
