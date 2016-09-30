@@ -56,10 +56,11 @@ Ext.define('CustomApp', {
             model: 'PortfolioItem',
             autoLoad: true,
             remoteSort: false,
-            fetch:[
-        	    "FormattedID", 
-            	"State"
-        	],
+            fetch: true,
+        //     fetch:[
+        // 	    "FormattedID", 
+        //     	"State"
+        // 	],
             limit: Infinity
        });
        this._featureStore.on('load',function () {
@@ -75,7 +76,8 @@ Ext.define('CustomApp', {
                 	"Feature",
                 	"WorkItemType",
                 	"Milestones",
-                	"ScheduleState"
+                	"ScheduleState",
+                	"SuccessCriteria" 
             	],
                 limit: Infinity,
                 listeners: {
@@ -88,6 +90,7 @@ Ext.define('CustomApp', {
     _onDataLoaded: function(store, data) {
         var stories = [],
             pendingTestCases = data.length;
+            console.log(this._featureStore);
         _.each(data, function(story) {
             var s = { 
             	Feature: story.get("Feature"), 
@@ -100,9 +103,10 @@ Ext.define('CustomApp', {
             	TestCases: [],
             	WorkItemType: story.get("WorkItemType"),
             	StoryScheduleState: story.get("ScheduleState"),
-            	FeatureState: ''
+            	FeatureState: '',
+            	SuccessCriteria: story.get("c_SuccessCriteria")
             };
-            
+
             if (s.Feature) {
                 s.FeatureName = s.Feature.Name;
                 s.FeatureWorkItemType = s.Feature.c_WorkItemType;
@@ -156,9 +160,10 @@ Ext.define('CustomApp', {
                 },
                 scope: this
             });
-
             if (s.Feature && s.FeatureWorkItemType === "Functional") {
-                stories.push(s);
+                if(s.SuccessCriteria) {
+                    stories.push(s);
+                }
             }
         }, this);
     },
