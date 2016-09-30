@@ -89,7 +89,6 @@ Ext.define('CustomApp', {
     _onDataLoaded: function(store, data) {
         var stories = [],
             pendingTestCases = data.length;
-            console.log(this._featureStore);
         _.each(data, function(story) {
             var s = { 
             	Feature: story.get("Feature"), 
