@@ -179,6 +179,10 @@
         this._myMask.hide();
         var store = Ext.create('Rally.data.custom.Store', {
             data: stories,
+            sorters: [
+                { property: 'FeatureNumericID', direction: 'ASC' },
+                { property: 'StoryNumericID', direction: 'ASC'}
+            ],
             proxy: {
                 type:'memory'
             }
