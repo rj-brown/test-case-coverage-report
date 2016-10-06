@@ -300,7 +300,6 @@ Ext.define('CustomApp', {
                 var cleanText = this._getFieldTextAndEscape(text);
                 data +=  cleanText + ',';
                 rowData += cleanText + ',';
-                console.log(rowData);
             }, this);
             data += this._getFieldTextAndEscape(record["FeatureMilestones"]) + "\r\n";
         }, this);
