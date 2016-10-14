@@ -53,16 +53,9 @@ Ext.define('CustomApp', {
             }
         });
    },
-    // _getStateFilter: function() {
-    //     return {
-    //         property: 'FeatureMilestones',
-    //         operator: '=',
-    //         value: this.down('#stateComboBox').getRawValue()
-    //     };
-    // },
     _getMultiFilter: function() {
         
-        var iterationFilter, releaseFilter;
+        var successCriteriaFilter, milestoneFilter;
         
         if (this.down('#successCriteriaCombobox').items.items[0].rawValue !== "All Success Criteria") {
             var successCriteriaValue = '';
@@ -71,7 +64,7 @@ Ext.define('CustomApp', {
             } else {
                 successCriteriaValue = false;
             }
-            iterationFilter = {
+            successCriteriaFilter = {
                 property: 'FeatureUserStorySuccessCriteria',
                 operator: '=',
                 value: successCriteriaValue
@@ -79,22 +72,22 @@ Ext.define('CustomApp', {
         }
         
         if (this.down('#stateComboBox').getRawValue() !== "All Milestones") {
-            releaseFilter = {
+            milestoneFilter = {
                 property: 'FeatureMilestones',
                 operator: '=',
                 value: this.down('#stateComboBox').getRawValue()
             };
         }
         
-        if (!releaseFilter && !iterationFilter) {
+        if (!milestoneFilter && !successCriteriaFilter) {
             this._grid.getStore().reload();
             return;
-        } else if (releaseFilter && iterationFilter ) {
-            return (Ext.create('Rally.data.QueryFilter', releaseFilter)).and(Ext.create('Rally.data.QueryFilter', iterationFilter));
-        } else if (!releaseFilter && iterationFilter) {
-            return Ext.create('Rally.data.QueryFilter', iterationFilter);
+        } else if (milestoneFilter && successCriteriaFilter ) {
+            return (Ext.create('Rally.data.QueryFilter', milestoneFilter)).and(Ext.create('Rally.data.QueryFilter', successCriteriaFilter));
+        } else if (!milestoneFilter && successCriteriaFilter) {
+            return Ext.create('Rally.data.QueryFilter', successCriteriaFilter);
         } else {
-            return Ext.create('Rally.data.QueryFilter', releaseFilter);
+            return Ext.create('Rally.data.QueryFilter', milestoneFilter);
         }  
     },
     _onSelect: function() {
@@ -103,39 +96,6 @@ Ext.define('CustomApp', {
         store.clearFilter(true);
         store.filter(this._getMultiFilter());
     },
-    // _onSelect: function() {
-    //     var store = this._grid.getStore();
-    
-    //     store.clearFilter(true);
-    //     if (this.down('#stateComboBox').getRawValue() !== "-- No Entry --") {
-    //         store.filter(this._getStateFilter());
-    //     } else {
-    //         store.reload();
-    //     }
-    // },
-    // _getSuccessCriteriaFilter: function() {
-    //     var successCriteriaValue = '';
-    //     if(this.down('#successCriteriaCombobox').items.items[0].rawValue === "Yes") {
-    //         successCriteriaValue = true;
-    //     } else {
-    //         successCriteriaValue = false;
-    //     }
-    //     return {
-    //         property: 'FeatureUserStorySuccessCriteria',
-    //         operator: '=',
-    //         value: successCriteriaValue
-    //     };
-    // },
-    // _onSelectSuccessCriteria: function() {
-    //     var store = this._grid.getStore();
-    
-    //     store.clearFilter(true);
-    //     if (this.down('#successCriteriaCombobox').items.items[0].rawValue !== "-- No Entry --") {
-    //         store.filter(this._getSuccessCriteriaFilter());
-    //     } else {
-    //         store.reload();
-    //     }
-    // },
    _initStore: function() {
         Ext.create('Rally.data.wsapi.Store', {
             model: 'PortfolioItem/Feature',
