@@ -9,6 +9,11 @@ Ext.define('CustomApp', {
         },
         {
             xtype: 'container',
+            itemId: 'successCriteriaCombobox',
+            cls: 'success-criteria-combo-box'
+        },
+        {
+            xtype: 'container',
             itemId: 'milestoneCombobox',
             cls: 'milestone-combo-box'
         },
@@ -22,10 +27,24 @@ Ext.define('CustomApp', {
         this._myMask = new Ext.LoadMask(Ext.getBody(), {msg:"Loading data..."});
         this._myMask.show();
         
+        this.down('#successCriteriaCombobox').add({
+            xtype: 'rallyfieldvaluecombobox',
+            itemId: 'successCriteriaCombobox',
+            model: 'UserStory',
+            field: 'c_SuccessCriteria',
+            allowNoEntry: true,
+            noEntryText: 'All Success Criteria',
+            listeners: {
+                scope: this,
+                select: this._onSelect
+            },
+        });
+        
         this.down('#milestoneCombobox').add({
             xtype: 'rallymilestonecombobox',
             itemId: 'stateComboBox',
             allowNoEntry: true,
+            noEntryText: 'All Milestones',
             model: ['userstory'],
             listeners: {
                 scope: this,
@@ -34,23 +53,89 @@ Ext.define('CustomApp', {
             }
         });
    },
-    _getStateFilter: function() {
-        return {
-            property: 'FeatureMilestones',
-            operator: '=',
-            value: this.down('#stateComboBox').getRawValue()
-        };
+    // _getStateFilter: function() {
+    //     return {
+    //         property: 'FeatureMilestones',
+    //         operator: '=',
+    //         value: this.down('#stateComboBox').getRawValue()
+    //     };
+    // },
+    _getMultiFilter: function() {
+        
+        var iterationFilter, releaseFilter;
+        
+        if (this.down('#successCriteriaCombobox').items.items[0].rawValue !== "All Success Criteria") {
+            var successCriteriaValue = '';
+            if(this.down('#successCriteriaCombobox').items.items[0].rawValue === "Yes") {
+                successCriteriaValue = true;
+            } else {
+                successCriteriaValue = false;
+            }
+            iterationFilter = {
+                property: 'FeatureUserStorySuccessCriteria',
+                operator: '=',
+                value: successCriteriaValue
+            };
+        }
+        
+        if (this.down('#stateComboBox').getRawValue() !== "All Milestones") {
+            releaseFilter = {
+                property: 'FeatureMilestones',
+                operator: '=',
+                value: this.down('#stateComboBox').getRawValue()
+            };
+        }
+        
+        if (!releaseFilter && !iterationFilter) {
+            this._grid.getStore().reload();
+            return;
+        } else if (releaseFilter && iterationFilter ) {
+            return (Ext.create('Rally.data.QueryFilter', releaseFilter)).and(Ext.create('Rally.data.QueryFilter', iterationFilter));
+        } else if (!releaseFilter && iterationFilter) {
+            return Ext.create('Rally.data.QueryFilter', iterationFilter);
+        } else {
+            return Ext.create('Rally.data.QueryFilter', releaseFilter);
+        }  
     },
     _onSelect: function() {
         var store = this._grid.getStore();
     
         store.clearFilter(true);
-        if (this.down('#stateComboBox').getRawValue() !== "-- No Entry --") {
-            store.filter(this._getStateFilter());
-        } else {
-            store.reload();
-        }
+        store.filter(this._getMultiFilter());
     },
+    // _onSelect: function() {
+    //     var store = this._grid.getStore();
+    
+    //     store.clearFilter(true);
+    //     if (this.down('#stateComboBox').getRawValue() !== "-- No Entry --") {
+    //         store.filter(this._getStateFilter());
+    //     } else {
+    //         store.reload();
+    //     }
+    // },
+    // _getSuccessCriteriaFilter: function() {
+    //     var successCriteriaValue = '';
+    //     if(this.down('#successCriteriaCombobox').items.items[0].rawValue === "Yes") {
+    //         successCriteriaValue = true;
+    //     } else {
+    //         successCriteriaValue = false;
+    //     }
+    //     return {
+    //         property: 'FeatureUserStorySuccessCriteria',
+    //         operator: '=',
+    //         value: successCriteriaValue
+    //     };
+    // },
+    // _onSelectSuccessCriteria: function() {
+    //     var store = this._grid.getStore();
+    
+    //     store.clearFilter(true);
+    //     if (this.down('#successCriteriaCombobox').items.items[0].rawValue !== "-- No Entry --") {
+    //         store.filter(this._getSuccessCriteriaFilter());
+    //     } else {
+    //         store.reload();
+    //     }
+    // },
    _initStore: function() {
         Ext.create('Rally.data.wsapi.Store', {
             model: 'PortfolioItem/Feature',
@@ -66,12 +151,8 @@ Ext.define('CustomApp', {
     },
     _onDataLoaded: function(store, data) {
         var features = [],
-            pendingTestCases = data.length,
-            lastFeatureFlag = false;
-        _.each(data, function(feature, index) {
-            if (index === data.length - 1) {
-                lastFeatureFlag = true;
-            }
+            pendingTestCases = data.length;
+        _.each(data, function(feature) {
             var f = {
                 FormattedID: feature.get("FormattedID"),
                 _ref: feature.get("_ref"),
@@ -109,7 +190,6 @@ Ext.define('CustomApp', {
                 feature.getCollection("UserStories", { fetch: ["FormattedID", "Name", "ScheduleState", "c_SuccessCriteria", "TestCases"] }).load({
                     callback: function(records) { 
     	            	_.each(records, function(userstory) {
-    	            	    if (userstory.get("c_SuccessCriteria") || lastFeatureFlag) {
     	            	        var reference = userstory.get("FormattedID");
         	            	    f.UserStories.push({
         	            	        _ref: userstory.get("_ref"), 
@@ -117,7 +197,8 @@ Ext.define('CustomApp', {
                     	            StoryNumericID: Number(userstory.get("FormattedID").replace(/\D+/g, '')),
                     	            Name: userstory.get("Name"),
                     	            ScheduleState: userstory.get("ScheduleState"),
-                    	            TestCaseCount: userstory.get("TestCases").Count
+                    	            TestCaseCount: userstory.get("TestCases").Count,
+                    	            SuccessCriteria: userstory.get("c_SuccessCriteria")
         	            	    });
     	            	    
         	            		userstory.getCollection("TestCases", { fetch: ["FormattedID", "Name"] }).load({ 
@@ -138,7 +219,7 @@ Ext.define('CustomApp', {
                                     },
                                     scope: this
                                 });
-        	            	}
+        	 
     	            	}, this);
                     },
                     scope: this
@@ -169,7 +250,8 @@ Ext.define('CustomApp', {
                         FeatureUserStoryName: "",
                         FeatureUserStoryState: "",
                         FeatureUserStoryTestCaseCount: 0,
-                        FeatureUserStoryTestCases: []
+                        FeatureUserStoryTestCases: [],
+                        FeatureUserStorySuccessCriteria: ''
                     };
                     
                     if (row.TestCases.length > 0) {
@@ -187,6 +269,7 @@ Ext.define('CustomApp', {
                     r.FeatureUserStoryNumericID = story.StoryNumericID;
                     r.FeatureUserStoryName = story.Name;
                     r.FeatureUserStoryState = story.ScheduleState;
+                    r.FeatureUserStorySuccessCriteria = story.SuccessCriteria;
                     rows.push(r);
                 });
             }
@@ -201,7 +284,7 @@ Ext.define('CustomApp', {
             data: stories,
             sorters: [
                 { property: 'FeatureNumericID', direction: 'ASC' },
-                { property: 'StoryNumericID', direction: 'ASC'}
+                { property: 'FeatureUserStoryNumericID', direction: 'ASC'}
             ],
             proxy: {
                 type:'memory'
@@ -234,7 +317,7 @@ Ext.define('CustomApp', {
             }, { 
             	text: "User Story ID", dataIndex: "FeatureUserStory",
             	renderer: function(value) {
-                    return value ? '<a href="' + Rally.nav.Manager.getDetailUrl(value[0]) + '">' + value[0].FormattedID + "</a>" : void 0;
+                    return value ? '<a href="' + Rally.nav.Manager.getDetailUrl(value[0]) + '" target="_blank">' + value[0].FormattedID + "</a>" : void 0;
                 },
             	getSortParam: function() {
             	    return "FeatureUserStoryNumericID";
@@ -250,7 +333,7 @@ Ext.define('CustomApp', {
                 renderer: function(value) {
                     var html = [];
                     Ext.Array.each(value, function(testcase) { 
-                	    html.push('<a href="' + Rally.nav.Manager.getDetailUrl(testcase) + '">' + testcase.FormattedID + "</a>");
+                	    html.push('<a href="' + Rally.nav.Manager.getDetailUrl(testcase) + '" target="_blank">' + testcase.FormattedID + "</a>");
                     });
                     return html.join("</br>");
                 },
