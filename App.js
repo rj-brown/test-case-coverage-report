@@ -82,7 +82,7 @@ Ext.define('CustomApp', {
         if (!milestoneFilter && !successCriteriaFilter) {
             this._grid.getStore().reload();
             return;
-        } else if (milestoneFilter && successCriteriaFilter ) {
+        } else if (milestoneFilter && successCriteriaFilter) {
             return (Ext.create('Rally.data.QueryFilter', milestoneFilter)).and(Ext.create('Rally.data.QueryFilter', successCriteriaFilter));
         } else if (!milestoneFilter && successCriteriaFilter) {
             return Ext.create('Rally.data.QueryFilter', successCriteriaFilter);

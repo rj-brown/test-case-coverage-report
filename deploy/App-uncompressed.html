@@ -91,7 +91,7 @@
         if (!milestoneFilter && !successCriteriaFilter) {
             this._grid.getStore().reload();
             return;
-        } else if (milestoneFilter && successCriteriaFilter ) {
+        } else if (milestoneFilter && successCriteriaFilter) {
             return (Ext.create('Rally.data.QueryFilter', milestoneFilter)).and(Ext.create('Rally.data.QueryFilter', successCriteriaFilter));
         } else if (!milestoneFilter && successCriteriaFilter) {
             return Ext.create('Rally.data.QueryFilter', successCriteriaFilter);
@@ -418,10 +418,15 @@
 }
 .export-button {
   display: inline;
-  float: left;
+  float: right;
   width: 100px;
 }
 .milestone-combo-box {
+  display: inline;
+  float: left;
+  width: 160px;
+}
+.success-criteria-combo-box {
   display: inline;
   float: left;
   width: 160px;
