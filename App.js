@@ -110,6 +110,9 @@ Ext.define('CustomApp', {
         });
     },
     _onDataLoaded: function(store, data) {
+        if(data.length === 0) {
+            this._makeGrid(data);
+        }
         var features = [],
             pendingTestCases = data.length;
         _.each(data, function(feature) {
