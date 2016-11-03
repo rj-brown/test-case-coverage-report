@@ -123,8 +123,10 @@
             this._makeGrid(data);
         }
         var features = [],
-            pendingTestCases = data.length;
-        _.each(data, function(feature) {
+            promises = [],
+            userStoryStore = "",
+            testCaseStore = "";
+        _.each(data, function(feature, index) {
             var f = {
                 FormattedID: feature.get("FormattedID"),
                 _ref: feature.get("_ref"),
@@ -159,7 +161,7 @@
                     f.FeatureMilestones = milestones.join(', ');
                 }
                 
-                feature.getCollection("UserStories", { fetch: ["FormattedID", "Name", "ScheduleState", "c_SuccessCriteria", "TestCases"] }).load({
+                userStoryStore = feature.getCollection("UserStories", { fetch: ["FormattedID", "Name", "ScheduleState", "c_SuccessCriteria", "TestCases"] }).load({
                     callback: function(records) { 
     	            	_.each(records, function(userstory) {
     	            	        var reference = userstory.get("FormattedID");
@@ -173,7 +175,7 @@
                     	            SuccessCriteria: userstory.get("c_SuccessCriteria")
         	            	    });
     	            	    
-        	            		userstory.getCollection("TestCases", { fetch: ["FormattedID", "Name"] }).load({ 
+        	            		testCaseStore = userstory.getCollection("TestCases", { fetch: ["FormattedID", "Name"] }).load({ 
                                 	callback: function(records) {
                     	            	_.each(records, function(testcase) {
                     	            		f.TestCases.push({ 
@@ -183,11 +185,6 @@
                     	            			StoryName: reference
                     	            		}); 
                     	            	}, this);
-                    
-                    	            	--pendingTestCases;
-                                        if (pendingTestCases === 0) {
-                                            this._makeGrid(this._createMatrix(features));
-                                        }
                                     },
                                     scope: this
                                 });
@@ -197,8 +194,20 @@
                     scope: this
                 });
                 features.push(f);
+                promises.push(userStoryStore, testCaseStore);
+            } else if ((index === data.length - 1) && features.length === 0) {
+                this._makeGrid(features);
             }
         }, this);
+        
+        Deft.Promise.all(promises).then({
+            success: function() {
+                this._makeGrid(this._createMatrix(features));
+            },
+            scope: this
+        });
+                
+                
     },
     
     _createMatrix: function(data) {

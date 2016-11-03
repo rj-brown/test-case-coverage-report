@@ -114,7 +114,9 @@ Ext.define('CustomApp', {
             this._makeGrid(data);
         }
         var features = [],
-            pendingTestCases = data.length;
+            promises = [],
+            userStoryStore = "",
+            testCaseStore = "";
         _.each(data, function(feature, index) {
             var f = {
                 FormattedID: feature.get("FormattedID"),
@@ -150,7 +152,7 @@ Ext.define('CustomApp', {
                     f.FeatureMilestones = milestones.join(', ');
                 }
                 
-                feature.getCollection("UserStories", { fetch: ["FormattedID", "Name", "ScheduleState", "c_SuccessCriteria", "TestCases"] }).load({
+                userStoryStore = feature.getCollection("UserStories", { fetch: ["FormattedID", "Name", "ScheduleState", "c_SuccessCriteria", "TestCases"] }).load({
                     callback: function(records) { 
     	            	_.each(records, function(userstory) {
     	            	        var reference = userstory.get("FormattedID");
@@ -164,7 +166,7 @@ Ext.define('CustomApp', {
                     	            SuccessCriteria: userstory.get("c_SuccessCriteria")
         	            	    });
     	            	    
-        	            		userstory.getCollection("TestCases", { fetch: ["FormattedID", "Name"] }).load({ 
+        	            		testCaseStore = userstory.getCollection("TestCases", { fetch: ["FormattedID", "Name"] }).load({ 
                                 	callback: function(records) {
                     	            	_.each(records, function(testcase) {
                     	            		f.TestCases.push({ 
@@ -174,14 +176,6 @@ Ext.define('CustomApp', {
                     	            			StoryName: reference
                     	            		}); 
                     	            	}, this);
-                    
-                    	            	--pendingTestCases;
-                                        if (pendingTestCases === 0) {
-                                            var self = this;
-                                            setTimeout(function(){ 
-                                                self._makeGrid(self._createMatrix(features));
-                                            }, 3000);
-                                        }
                                     },
                                     scope: this
                                 });
@@ -191,10 +185,20 @@ Ext.define('CustomApp', {
                     scope: this
                 });
                 features.push(f);
+                promises.push(userStoryStore, testCaseStore);
             } else if ((index === data.length - 1) && features.length === 0) {
                 this._makeGrid(features);
             }
         }, this);
+        
+        Deft.Promise.all(promises).then({
+            success: function() {
+                this._makeGrid(this._createMatrix(features));
+            },
+            scope: this
+        });
+                
+                
     },
     
     _createMatrix: function(data) {
