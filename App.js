@@ -177,6 +177,7 @@ Ext.define('CustomApp', {
                     
                     	            	--pendingTestCases;
                                         if (pendingTestCases === 0) {
+                                            var self = this;
                                             setTimeout(function(){ 
                                                 self._makeGrid(self._createMatrix(features));
                                             }, 3000);
