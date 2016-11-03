@@ -193,7 +193,10 @@ Ext.define('CustomApp', {
         
         Deft.Promise.all(promises).then({
             success: function() {
-                this._makeGrid(this._createMatrix(features));
+                var self = this;
+                setTimeout(function(){ 
+                    self._makeGrid(self._createMatrix(features)); 
+                }, 3000);
             },
             scope: this
         });
