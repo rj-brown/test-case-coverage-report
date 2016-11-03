@@ -115,7 +115,7 @@ Ext.define('CustomApp', {
         }
         var features = [],
             pendingTestCases = data.length;
-        _.each(data, function(feature) {
+        _.each(data, function(feature, index) {
             var f = {
                 FormattedID: feature.get("FormattedID"),
                 _ref: feature.get("_ref"),
@@ -177,7 +177,9 @@ Ext.define('CustomApp', {
                     
                     	            	--pendingTestCases;
                                         if (pendingTestCases === 0) {
-                                            this._makeGrid(this._createMatrix(features));
+                                            setTimeout(function(){ 
+                                                self._makeGrid(self._createMatrix(features));
+                                            }, 3000);
                                         }
                                     },
                                     scope: this
@@ -188,6 +190,8 @@ Ext.define('CustomApp', {
                     scope: this
                 });
                 features.push(f);
+            } else if ((index === data.length - 1) && features.length === 0) {
+                this._makeGrid(features);
             }
         }, this);
     },
