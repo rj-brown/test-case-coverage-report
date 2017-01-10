@@ -303,6 +303,11 @@ Ext.define('CustomApp', {
             	text: "User Story Name", dataIndex: "FeatureUserStoryName", flex: 1
             }, {
                 text: "Story Schedule State", dataIndex: "FeatureUserStoryState"
+            }, {
+                text: "Story Success Criteria", dataIndex: "FeatureUserStorySuccessCriteria",
+                renderer: function(value) {
+                    return value ? 'Yes' : 'No';
+                }
             }, { 
             	text: "Test Case Count", dataIndex: "FeatureUserStoryTestCaseCount", sortable: false
             }, {
@@ -317,11 +322,6 @@ Ext.define('CustomApp', {
                 getSortParam: function() {
             	    return "TestCaseCount";
                 }
-            }, {
-                text: "Story Success Criteria", dataIndex: "FeatureUserStorySuccessCriteria",
-                renderer: function(value) {
-                    return value ? 'Yes' : 'No';
-                },
             }]
         });
         this.down('#gridContainer').add(this._grid);
@@ -355,6 +355,12 @@ Ext.define('CustomApp', {
                     text += record["FeatureUserStory"][0].FormattedID;
                 } else if (fieldName === "FeatureUserStoryTestCases"){
                     data += this._getTestCaseRowsForCSV(record["FeatureUserStoryTestCases"], rowData, record["FeatureUserStoryTestCaseCount"], record["FeatureMilestones"]);
+                } else if (fieldName === "FeatureUserStorySuccessCriteria"){
+                    if(record["FeatureUserStorySuccessCriteria"]) {
+                        text += 'Yes';
+                    } else {
+                        text += 'No';
+                    }
                 } else {
                     text = record[fieldName];
                 }
