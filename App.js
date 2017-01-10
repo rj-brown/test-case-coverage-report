@@ -34,6 +34,7 @@ Ext.define('CustomApp', {
             field: 'c_SuccessCriteria',
             allowNoEntry: true,
             noEntryText: 'All Success Criteria',
+            value: true,
             listeners: {
                 scope: this,
                 select: this._onSelect
@@ -195,7 +196,8 @@ Ext.define('CustomApp', {
             success: function() {
                 var self = this;
                 setTimeout(function(){ 
-                    self._makeGrid(self._createMatrix(features)); 
+                    self._makeGrid(self._createMatrix(features));
+                    self._onSelect();
                 }, 3000);
             },
             scope: this
@@ -315,6 +317,11 @@ Ext.define('CustomApp', {
                 getSortParam: function() {
             	    return "TestCaseCount";
                 }
+            }, {
+                text: "Story Success Criteria", dataIndex: "FeatureUserStorySuccessCriteria",
+                renderer: function(value) {
+                    return value ? 'Yes' : 'No';
+                },
             }]
         });
         this.down('#gridContainer').add(this._grid);
