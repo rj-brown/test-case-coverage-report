@@ -43,6 +43,7 @@
             field: 'c_SuccessCriteria',
             allowNoEntry: true,
             noEntryText: 'All Success Criteria',
+            value: true,
             listeners: {
                 scope: this,
                 select: this._onSelect
@@ -204,7 +205,8 @@
             success: function() {
                 var self = this;
                 setTimeout(function(){ 
-                    self._makeGrid(self._createMatrix(features)); 
+                    self._makeGrid(self._createMatrix(features));
+                    self._onSelect();
                 }, 3000);
             },
             scope: this
@@ -310,6 +312,11 @@
             	text: "User Story Name", dataIndex: "FeatureUserStoryName", flex: 1
             }, {
                 text: "Story Schedule State", dataIndex: "FeatureUserStoryState"
+            }, {
+                text: "Story Success Criteria", dataIndex: "FeatureUserStorySuccessCriteria",
+                renderer: function(value) {
+                    return value ? 'Yes' : 'No';
+                }
             }, { 
             	text: "Test Case Count", dataIndex: "FeatureUserStoryTestCaseCount", sortable: false
             }, {
@@ -357,6 +364,12 @@
                     text += record["FeatureUserStory"][0].FormattedID;
                 } else if (fieldName === "FeatureUserStoryTestCases"){
                     data += this._getTestCaseRowsForCSV(record["FeatureUserStoryTestCases"], rowData, record["FeatureUserStoryTestCaseCount"], record["FeatureMilestones"]);
+                } else if (fieldName === "FeatureUserStorySuccessCriteria"){
+                    if(record["FeatureUserStorySuccessCriteria"]) {
+                        text += 'Yes';
+                    } else {
+                        text += 'No';
+                    }
                 } else {
                     text = record[fieldName];
                 }
